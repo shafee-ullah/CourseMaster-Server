@@ -73,11 +73,9 @@ enrollmentSchema.index({ student: 1, course: 1 }, { unique: true }); // Prevent 
 enrollmentSchema.index({ student: 1, status: 1 }); // Get student's active courses
 enrollmentSchema.index({ course: 1, status: 1 }); // Get course enrollments
 
-// Pre-save middleware to calculate progress
-enrollmentSchema.pre("save", function (next) {
-  // This will be populated from the course syllabus
-  // Progress calculation will be done in the controller/service
-  next();
+// Pre-save middleware to calculate progress (placeholder)
+enrollmentSchema.pre("save", function () {
+  // Progress calculation can be added here if needed
 });
 
 // Instance method to mark lesson as completed
