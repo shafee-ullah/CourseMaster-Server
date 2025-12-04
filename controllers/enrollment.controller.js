@@ -1,6 +1,7 @@
 const Enrollment = require("../models/Enrollment.model");
 const Course = require("../models/Course.model");
 const { HTTP_STATUS } = require("../utils/constants");
+const mongoose = require("mongoose");
 
 /**
  * Enroll in a course
@@ -98,22 +99,25 @@ const getMyCourses = async (req, res, next) => {
       .lean(); // Use lean() for better performance
 
     // Calculate progress for each enrollment
-    const enrollmentsWithProgress = enrollments.map((enrollment) => {
-      const course = enrollment.course;
-      const totalLessons = course.syllabus?.length || 0;
-      const completedLessons = enrollment.completedLessons?.length || 0;
-      const progress =
-        totalLessons > 0
-          ? Math.round((completedLessons / totalLessons) * 100)
-          : 0;
+    // Guard against enrollments whose course was deleted (course may be null)
+    const enrollmentsWithProgress = enrollments
+      .filter((enrollment) => enrollment.course)
+      .map((enrollment) => {
+        const course = enrollment.course;
+        const totalLessons = course.syllabus?.length || 0;
+        const completedLessons = enrollment.completedLessons?.length || 0;
+        const progress =
+          totalLessons > 0
+            ? Math.round((completedLessons / totalLessons) * 100)
+            : 0;
 
-      return {
-        ...enrollment,
-        progress,
-        totalLessons,
-        completedLessonsCount: completedLessons,
-      };
-    });
+        return {
+          ...enrollment,
+          progress,
+          totalLessons,
+          completedLessonsCount: completedLessons,
+        };
+      });
 
     res.status(HTTP_STATUS.OK).json({
       success: true,
@@ -300,10 +304,69 @@ const updateLastAccessed = async (req, res, next) => {
   }
 };
 
+/**
+ * Admin: Get enrollment analytics over time
+ * GET /api/enrollments/admin/analytics
+ * Optional query params: rangeDays (default 30)
+ */
+const getEnrollmentAnalytics = async (req, res, next) => {
+  try {
+    const rangeDays = parseInt(req.query.rangeDays, 10) || 30;
+    const sinceDate = new Date(Date.now() - rangeDays * 24 * 60 * 60 * 1000);
+
+    const pipeline = [
+      {
+        $match: {
+          createdAt: { $gte: sinceDate },
+        },
+      },
+      {
+        $group: {
+          _id: {
+            year: { $year: "$createdAt" },
+            month: { $month: "$createdAt" },
+            day: { $dayOfMonth: "$createdAt" },
+          },
+          count: { $sum: 1 },
+        },
+      },
+      {
+        $sort: {
+          "_id.year": 1,
+          "_id.month": 1,
+          "_id.day": 1,
+        },
+      },
+    ];
+
+    const results = await Enrollment.aggregate(pipeline);
+
+    const data = results.map((item) => {
+      const { year, month, day } = item._id;
+      // month is 1-based from Mongo, adjust for JS Date
+      const dateObj = new Date(year, month - 1, day);
+      const dateLabel = dateObj.toISOString().slice(0, 10); // YYYY-MM-DD
+      return {
+        date: dateLabel,
+        count: item.count,
+      };
+    });
+
+    res.status(HTTP_STATUS.OK).json({
+      success: true,
+      data,
+      rangeDays,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   enrollInCourse,
   getMyCourses,
   getEnrollmentById,
   markLessonComplete,
   updateLastAccessed,
+  getEnrollmentAnalytics,
 };

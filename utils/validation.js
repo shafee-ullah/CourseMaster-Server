@@ -14,6 +14,14 @@ const lessonSchema = Joi.object({
   order: Joi.number().integer().min(0).required(),
 });
 
+// Batch schema for courses
+const batchSchema = Joi.object({
+  batchName: Joi.string().required().trim().max(100),
+  startDate: Joi.date().required(),
+  endDate: Joi.date().allow(null),
+  isActive: Joi.boolean().default(true),
+});
+
 // Course validation schema
 const courseSchema = Joi.object({
   title: Joi.string().required().trim().max(200).messages({
@@ -41,6 +49,7 @@ const courseSchema = Joi.object({
   }),
   tags: Joi.array().items(Joi.string().trim()).default([]),
   status: Joi.string().valid("draft", "published", "archived").default("draft"),
+  batches: Joi.array().items(batchSchema).default([]),
 });
 
 // Course update schema (all fields optional)
@@ -53,7 +62,53 @@ const courseUpdateSchema = Joi.object({
   category: Joi.string().trim().max(100),
   tags: Joi.array().items(Joi.string().trim()),
   status: Joi.string().valid("draft", "published", "archived"),
+  batches: Joi.array().items(batchSchema),
 }).min(1); // At least one field must be provided
+
+// Assignment submission schema
+const assignmentSubmitSchema = Joi.object({
+  courseId: Joi.string().required().trim(),
+  title: Joi.string().required().trim().max(200),
+  description: Joi.string().allow("").trim().max(2000),
+  submissionLink: Joi.string().uri().required().trim(),
+});
+
+// Quiz creation schema (basic)
+const quizCreateSchema = Joi.object({
+  courseId: Joi.string().required().trim(),
+  title: Joi.string().required().trim().max(200),
+  description: Joi.string().allow("").trim().max(1000),
+  isPublished: Joi.boolean().default(false),
+  questions: Joi.array()
+    .items(
+      Joi.object({
+        questionText: Joi.string().required().trim(),
+        options: Joi.array().items(Joi.string().trim()).min(2).required(),
+        correctIndex: Joi.number().integer().min(0).required(),
+      })
+    )
+    .min(1)
+    .required(),
+});
+
+// Quiz update schema (all fields optional, at least one required)
+const quizUpdateSchema = Joi.object({
+  title: Joi.string().trim().max(200),
+  description: Joi.string().allow("").trim().max(1000),
+  isPublished: Joi.boolean(),
+  questions: Joi.array().items(
+    Joi.object({
+      questionText: Joi.string().required().trim(),
+      options: Joi.array().items(Joi.string().trim()).min(2).required(),
+      correctIndex: Joi.number().integer().min(0).required(),
+    })
+  ),
+}).min(1);
+
+// Quiz submit schema
+const quizSubmitSchema = Joi.object({
+  answers: Joi.array().items(Joi.number().integer().min(0)).min(1).required(),
+});
 
 // Validation middleware factory
 const validate = (schema) => {
@@ -90,5 +145,9 @@ const validate = (schema) => {
 module.exports = {
   courseSchema,
   courseUpdateSchema,
+  assignmentSubmitSchema,
+  quizCreateSchema,
+  quizUpdateSchema,
+  quizSubmitSchema,
   validate,
 };

@@ -105,6 +105,27 @@ const courseSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    // Course Batches (Array of batch objects)
+    batches: [
+      {
+        batchName: {
+          type: String,
+          required: true,
+          trim: true,
+        },
+        startDate: {
+          type: Date,
+          required: true,
+        },
+        endDate: {
+          type: Date,
+        },
+        isActive: {
+          type: Boolean,
+          default: true,
+        },
+      },
+    ],
   },
   {
     timestamps: true, // Adds createdAt and updatedAt automatically
@@ -119,6 +140,10 @@ courseSchema.index({ instructor: 1, status: 1 }); // Instructor's courses
 
 // Virtual for total course duration
 courseSchema.virtual("totalDuration").get(function () {
+  if (!Array.isArray(this.syllabus)) {
+    return 0;
+  }
+
   return this.syllabus.reduce(
     (total, lesson) => total + (lesson.duration || 0),
     0

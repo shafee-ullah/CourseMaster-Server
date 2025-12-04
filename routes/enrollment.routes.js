@@ -6,8 +6,9 @@ const {
   getEnrollmentById,
   markLessonComplete,
   updateLastAccessed,
+  getEnrollmentAnalytics,
 } = require("../controllers/enrollment.controller");
-const { authenticate } = require("../middleware/auth.middleware");
+const { authenticate, authorizeAdmin } = require("../middleware/auth.middleware");
 
 /**
  * Enrollment Routes
@@ -28,5 +29,8 @@ router.post("/:enrollmentId/complete-lesson", authenticate, markLessonComplete);
 
 // PATCH /api/enrollments/:enrollmentId/access - Update last accessed
 router.patch("/:enrollmentId/access", authenticate, updateLastAccessed);
+
+// GET /api/enrollments/admin/analytics - Admin enrollment analytics
+router.get("/admin/analytics", authenticate, authorizeAdmin, getEnrollmentAnalytics);
 
 module.exports = router;

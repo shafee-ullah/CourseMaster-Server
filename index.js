@@ -42,6 +42,8 @@ app.get("/", (req, res) => {
 app.use("/api/auth", require("./routes/auth.routes"));
 app.use("/api/courses", require("./routes/course.routes"));
 app.use("/api/enrollments", require("./routes/enrollment.routes"));
+app.use("/api/assignments", require("./routes/assignment.routes"));
+app.use("/api/quizzes", require("./routes/quiz.routes"));
 
 // --- Error Handling Middleware ---
 
