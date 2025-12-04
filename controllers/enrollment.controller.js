@@ -362,6 +362,48 @@ const getEnrollmentAnalytics = async (req, res, next) => {
   }
 };
 
+/**
+ * Admin: Get all enrollments for a course
+ * GET /api/enrollments/admin/course/:courseId
+ */
+const getEnrollmentsByCourse = async (req, res, next) => {
+  try {
+    const { courseId } = req.params;
+
+    const enrollments = await Enrollment.find({ course: courseId })
+      .populate("student", "displayName email photoURL")
+      .populate("course", "title category batches")
+      .sort({ enrolledAt: -1 })
+      .lean();
+
+    // Calculate progress for each enrollment
+    const enrollmentsWithProgress = enrollments.map((enrollment) => {
+      const course = enrollment.course;
+      const totalLessons = course?.syllabus?.length || 0;
+      const completedLessons = enrollment.completedLessons?.length || 0;
+      const progress =
+        totalLessons > 0
+          ? Math.round((completedLessons / totalLessons) * 100)
+          : 0;
+
+      return {
+        ...enrollment,
+        progress,
+        totalLessons,
+        completedLessonsCount: completedLessons,
+      };
+    });
+
+    res.status(HTTP_STATUS.OK).json({
+      success: true,
+      data: enrollmentsWithProgress,
+      count: enrollmentsWithProgress.length,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   enrollInCourse,
   getMyCourses,
@@ -369,4 +411,5 @@ module.exports = {
   markLessonComplete,
   updateLastAccessed,
   getEnrollmentAnalytics,
+  getEnrollmentsByCourse,
 };
